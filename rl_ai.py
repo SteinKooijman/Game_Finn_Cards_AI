@@ -304,7 +304,7 @@ def train_agent(agent: RLAgent, num_episodes: int = 1000, verbose: bool = True):
                     # Lost due to duplicate suit
                     # Small fixed penalty - losing means 0 points, not negative points
                     # This discourages risky draws without being too harsh
-                    reward = -10.0
+                    reward = -5.0
                     agent.store_transition(state, action, reward)
                     episode_score += 0  # Lost round, no score
                     rounds_lost += 1
@@ -317,7 +317,7 @@ def train_agent(agent: RLAgent, num_episodes: int = 1000, verbose: bool = True):
                     # This encourages building larger hands while keeping drawing rewards small
                     new_hand_score = sum(card.get_value() for card in game.hand) * len(game.hand)
                     improvement = new_hand_score - current_hand_score
-                    reward = improvement * 0.1  # 10% of improvement - small fraction to keep drawing rewards small
+                    reward = improvement * 0.33  # 33% of improvement - encourages more drawing before retiring
                     agent.store_transition(state, action, reward)
             
             elif action == 1:  # Retire
