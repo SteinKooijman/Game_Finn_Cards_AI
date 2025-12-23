@@ -242,15 +242,8 @@ def simulate(num_games, strategy, verbose=True):
                 
                 if not success:
                     # Lost due to duplicate suit
-                    # Calculate score of hand BEFORE the card that caused the duplicate was added
-                    # (the card is already in hand, so we use hand[:-1] to exclude it)
-                    hand_before_loss = game.hand[:-1] if len(game.hand) > 1 else []
-                    if hand_before_loss:
-                        total_value = sum(card.get_value() for card in hand_before_loss)
-                        num_cards = len(hand_before_loss)
-                        round_score = total_value * num_cards
-                    else:
-                        round_score = 0
+                    # Score is 0 when you lose
+                    round_score = 0
                     game.add_to_total_score(round_score)
                     game_rounds.append({
                         "round": round_number,
@@ -419,5 +412,5 @@ if __name__ == "__main__":
     else:
         print("Note: AI strategy not available. Run train_rl_ai.py to train the model first.")
     
-    compare_strategies(20, strategies)
+    compare_strategies(50, strategies)
 

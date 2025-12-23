@@ -250,7 +250,8 @@ class RLAgent:
         self.model.load_weights(filepath)
 
 
-def train_agent(agent: RLAgent, num_episodes: int = 1000, verbose: bool = True):
+def train_agent(agent: RLAgent, num_episodes: int = 1000, verbose: bool = True,
+                draw_percentage: float = 0.33, loss_percentage: float = 1.0):
     """
     Train the RL agent by running episodes and updating the policy.
     
@@ -258,6 +259,8 @@ def train_agent(agent: RLAgent, num_episodes: int = 1000, verbose: bool = True):
         agent: RLAgent instance to train
         num_episodes: Number of training episodes
         verbose: Whether to print training progress
+        draw_percentage: Percentage multiplier for drawing reward (0.0 to 1.0)
+        loss_percentage: Percentage multiplier for loss penalty (0.0 to 1.0)
     """
     from card_simple import CardGame
     
@@ -302,9 +305,9 @@ def train_agent(agent: RLAgent, num_episodes: int = 1000, verbose: bool = True):
                 
                 if not success:
                     # Lost due to duplicate suit
-                    # Small fixed penalty - losing means 0 points, not negative points
-                    # This discourages risky draws without being too harsh
-                    reward = -5.0
+                    # Penalty equals the value of the hand lost (before adding the new card)
+                    # multiplied by loss_percentage
+                    reward = -current_hand_score * loss_percentage
                     agent.store_transition(state, action, reward)
                     episode_score += 0  # Lost round, no score
                     rounds_lost += 1
@@ -317,7 +320,7 @@ def train_agent(agent: RLAgent, num_episodes: int = 1000, verbose: bool = True):
                     # This encourages building larger hands while keeping drawing rewards small
                     new_hand_score = sum(card.get_value() for card in game.hand) * len(game.hand)
                     improvement = new_hand_score - current_hand_score
-                    reward = improvement * 0.33  # 33% of improvement - encourages more drawing before retiring
+                    reward = improvement * draw_percentage
                     agent.store_transition(state, action, reward)
             
             elif action == 1:  # Retire
@@ -376,10 +379,28 @@ _global_agent = None
 
 
 def get_agent() -> RLAgent:
-    """Get or create the global RL agent instance."""
+    """
+    Get or create the global RL agent instance.
+    
+    When creating a new agent, uses the same architecture as grid_search_rewards.py:
+    - 5 hidden layers
+    - 30 hidden units per layer
+    - learning rate 0.001
+    
+    This ensures compatibility with models saved by grid_search_rewards.py.
+    """
     global _global_agent
     if _global_agent is None:
-        _global_agent = RLAgent()
+        # Use same architecture as grid_search_rewards.py to ensure compatibility
+        _global_agent = RLAgent(hidden_layers=5, hidden_units=30, learning_rate=0.001)
+        # Try to load saved model if it exists
+        if os.path.exists("best_model.weights.h5"):
+            try:
+                _global_agent.load_model("best_model.weights.h5")
+            except Exception as e:
+                # If loading fails, use untrained agent
+                # This might happen if architecture doesn't match or file is corrupted
+                pass
     return _global_agent
 
 
@@ -396,9 +417,14 @@ def set_global_agent(agent: RLAgent):
 
 def train_and_set_agent(num_episodes: int = 1000, hidden_layers: int = 3, 
                         hidden_units: int = 30, learning_rate: float = 0.001, 
-                        verbose: bool = True) -> RLAgent:
+                        verbose: bool = True, draw_percentage: float = 0.33,
+                        loss_percentage: float = 1.0) -> RLAgent:
     """
-    Train an RL agent and set it as the global agent.
+    Train an RL agent, set it as the global agent, and save it to disk.
+    
+    The trained model is saved to 'best_model.weights.h5', which is the same file
+    that simulate.py loads from. This allows you to train a model with different
+    parameters and have simulate.py automatically use the updated model.
     
     Args:
         num_episodes: Number of training episodes
@@ -406,6 +432,8 @@ def train_and_set_agent(num_episodes: int = 1000, hidden_layers: int = 3,
         hidden_units: Number of units per hidden layer (max 30)
         learning_rate: Learning rate for optimizer
         verbose: Whether to print training progress
+        draw_percentage: Percentage multiplier for drawing reward (0.0 to 1.0)
+        loss_percentage: Percentage multiplier for loss penalty (0.0 to 1.0)
     
     Returns:
         The trained RLAgent instance
@@ -415,12 +443,20 @@ def train_and_set_agent(num_episodes: int = 1000, hidden_layers: int = 3,
                    learning_rate=learning_rate)
     
     print(f"Training agent for {num_episodes} episodes...")
-    train_agent(agent, num_episodes=num_episodes, verbose=verbose)
+    print(f"Reward parameters: draw_percentage={draw_percentage:.1%}, loss_percentage={loss_percentage:.1%}")
+    train_agent(agent, num_episodes=num_episodes, verbose=verbose,
+                draw_percentage=draw_percentage, loss_percentage=loss_percentage)
     
     # Set as global agent
     set_global_agent(agent)
     
-    print("\nTraining complete! Global agent is now set.")
+    # Save model to disk so simulate.py can load it in separate processes
+    model_save_path = "best_model.weights.h5"
+    print(f"\nSaving trained model to {model_save_path}...")
+    agent.save_model(model_save_path)
+    print(f"Model saved successfully!")
+    
+    print("\nTraining complete! Global agent is now set and saved to disk.")
     return agent
 
 
