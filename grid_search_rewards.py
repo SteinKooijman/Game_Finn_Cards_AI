@@ -30,14 +30,14 @@ from card_simple import CardGame
 TRAINING_EPISODES = 300  # Number of training episodes per combination
 
 # Neural network architecture (same for all combinations)
-HIDDEN_LAYERS = 5
-HIDDEN_UNITS = 30
+HIDDEN_LAYERS = 6
+HIDDEN_UNITS = 50
 LEARNING_RATE = 0.001
 
 # Grid search parameters
 GRID_MIN_PERCENTAGE = 0.05  # 5%
 GRID_MAX_PERCENTAGE = 0.3  # 50%
-GRID_STEPS = 3  # 10 steps = 100 combinations (10x10)
+GRID_STEPS = 10  # 10 steps = 100 combinations (10x10)
 
 # Evaluation parameters
 EVALUATION_GAMES = 50  # Number of games to evaluate each trained model
@@ -94,14 +94,8 @@ def evaluate_agent(agent: RLAgent, num_games: int = 50) -> dict:
                 
                 if not success:
                     # Lost due to duplicate suit
-                    # Calculate score of hand before the losing card
-                    hand_before_loss = game.hand[:-1] if len(game.hand) > 1 else []
-                    if hand_before_loss:
-                        total_value = sum(card.get_value() for card in hand_before_loss)
-                        num_cards = len(hand_before_loss)
-                        round_score = total_value * num_cards
-                    else:
-                        round_score = 0
+                    # Score is 0 when you lose (matches simulate.py and training behavior)
+                    round_score = 0
                     game_score += round_score
                     game.reset_hand()
                     continue

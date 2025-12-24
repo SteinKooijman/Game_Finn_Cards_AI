@@ -12,11 +12,11 @@ if __name__ == "__main__":
     
     # Reward parameters (optimized via grid search)
     # Update these values based on grid_search_results.csv if available
-    draw_percentage = 0.162  # Percentage multiplier for drawing reward
-    loss_percentage = 0.07  # Percentage multiplier for loss penalty
+    draw_percentage = 0.175  # Percentage multiplier for drawing reward
+    loss_percentage = 0.175  # Percentage multiplier for loss penalty
     
     train_and_set_agent(
-        num_episodes=300,
+        num_episodes=1000,
         hidden_layers=5,
         hidden_units=30,
         learning_rate=0.001,
